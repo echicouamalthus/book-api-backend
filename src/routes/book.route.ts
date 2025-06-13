@@ -38,7 +38,8 @@ const createBookRoute = createRoute({
 app.openapi(createBookRoute, async c => {
 	try {
 		const { caption, title, rating, image } = await c.req.valid('json');
-		const userId = c.get('userId') as number;
+		const jwtPayload = c.get('jwtPayload') as { userId: number } | undefined;
+		const userId = jwtPayload?.userId;
 
 		if (!userId) {
 			return c.json(
@@ -176,7 +177,8 @@ const getBookUserRoute = createRoute({
 
 app.openapi(getBookUserRoute, async c => {
 	try {
-		const userId = c.get('userId') as number;
+		const jwtPayload = c.get('jwtPayload') as { userId: number } | undefined;
+		const userId = jwtPayload?.userId;
 
 		if (!userId) {
 			return c.json(
@@ -256,7 +258,8 @@ app.openapi(deleteBooksRoute, async c => {
 		}
 
 		//check if user is the owner of the book
-		const userId = c.get('userId') as number;
+		const jwtPayload = c.get('jwtPayload') as { userId: number } | undefined;
+		const userId = jwtPayload?.userId;
 		if (userId !== book.userId) {
 			return c.json(
 				{
