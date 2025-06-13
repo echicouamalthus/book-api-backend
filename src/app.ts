@@ -45,9 +45,8 @@ app.doc('/doc', {
 
 app.get('/', c => {
 	return c.json({
-		message: `Bienvenue sur l'API Book ! Ce projet gère une bibliothèque de livres avec Hono, TypeScript et OpenAPI. ${new URL(
-			'https://www.youtube.com/'
-		)}`,
+		message: `Bienvenue sur l'API Book ! Ce projet gère une bibliothèque de livres avec Hono, TypeScript et OpenAPI.`,
+		url: 'https://www.youtube.com/',
 	});
 });
 
