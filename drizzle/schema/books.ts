@@ -38,6 +38,7 @@ export const insertBookSchema = fullInsertSchema.omit({
 	id: true,
 	createAt: true,
 	updateAt: true,
+	userId: true,
 });
 
 export const selectBookSchema = fullSelectSchema.omit({
