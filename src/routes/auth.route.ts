@@ -5,7 +5,7 @@ import {
 	insertLoginUserSchema,
 	insertRegisterUserSchema,
 	selectUserschema,
-} from '../../drizzle/schema/users';
+} from '../../drizzle/schema/profile';
 import db from '../../drizzle/db';
 import * as schema from '../../drizzle/schema';
 import { eq, or } from 'drizzle-orm';
@@ -62,9 +62,12 @@ app.openapi(registerRoute, async c => {
 		//check existing email or username
 		const [existingUser] = await db
 			.select()
-			.from(schema.users)
+			.from(schema.profile)
 			.where(
-				or(eq(schema.users.email, email), eq(schema.users.username, username))
+				or(
+					eq(schema.profile.email, email),
+					eq(schema.profile.username, username)
+				)
 			)
 			.limit(1);
 
@@ -79,7 +82,7 @@ app.openapi(registerRoute, async c => {
 		const profileImage = `https://api.dicebear.com/9.x/avataaars/svg?seed=${username.trim()}`;
 
 		const [user] = await db
-			.insert(schema.users)
+			.insert(schema.profile)
 			.values({
 				email,
 				password: hashedpassword,
@@ -87,10 +90,10 @@ app.openapi(registerRoute, async c => {
 				profileImage,
 			})
 			.returning({
-				id: schema.users.id,
-				email: schema.users.email,
-				profileImage: schema.users.profileImage,
-				username: schema.users.username,
+				id: schema.profile.id,
+				email: schema.profile.email,
+				profileImage: schema.profile.profileImage,
+				username: schema.profile.username,
 			});
 
 		const token = await generateToken(user.id);
@@ -154,8 +157,8 @@ app.openapi(loginRoute, async c => {
 		// check if user exists
 		const [user] = await db
 			.select()
-			.from(schema.users)
-			.where(eq(schema.users.email, email))
+			.from(schema.profile)
+			.where(eq(schema.profile.email, email))
 			.limit(1);
 		if (!user) {
 			return c.json(

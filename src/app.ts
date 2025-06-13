@@ -6,6 +6,7 @@ import { cors } from 'hono/cors';
 
 import packageJSON from '../package.json';
 import { app as authRoute } from '../src/routes/auth.route';
+import { app as bookRoute } from '../src/routes/book.route';
 
 const app = new OpenAPIHono({
 	strict: true,
@@ -27,6 +28,7 @@ app.notFound(notFound);
 app.onError(onError);
 
 app.route('/auth', authRoute);
+app.route('/book', bookRoute);
 
 app.doc('/doc', {
 	openapi: '3.0.0',

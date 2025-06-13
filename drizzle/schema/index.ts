@@ -1,3 +1,3 @@
-export { movies } from './movies'
-export { users } from './users'
-export { books } from './books'
+export { movies } from './movies';
+export { profile } from './profile';
+export { books } from './books';

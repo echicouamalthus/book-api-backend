@@ -10,7 +10,7 @@ const EnvSchema = z.object({
 		.default('development'),
 	PORT: z.coerce.number().default(9999),
 	BASE_API_URL: z.string().url(),
-	DB_FILE_NAME: z.string(),
+	DATABASE_URL: z.string(),
 	JWT_SECRET: z.string(),
 	CLOUDINARY_CLOUD_NAME: z.string(),
 	CLOUDINARY_API_KEY: z.string(),

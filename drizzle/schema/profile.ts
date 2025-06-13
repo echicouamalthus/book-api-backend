@@ -1,28 +1,28 @@
-import { relations, sql } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { relations } from 'drizzle-orm';
+import { pgTable, text, serial, timestamp } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
-import * as schema from './';
-import { password } from 'bun';
+import * as schema from '.';
 
-export const users = sqliteTable('users', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
+// Table users adaptée pour PostgreSQL
+export const profile = pgTable('profile', {
+	id: serial('id').primaryKey(),
 	username: text('username').notNull().unique(),
 	email: text('email').notNull().unique(),
 	password: text('password').notNull(),
 	profileImage: text('profileImage').default(''),
-	createAt: integer('createAt')
+	createAt: timestamp('createAt', { withTimezone: false })
 		.notNull()
-		.default(sql`(strftime('%s','now'))`),
-	updateAt: integer('updateAt')
+		.defaultNow(),
+	updateAt: timestamp('updateAt', { withTimezone: false })
 		.notNull()
-		.default(sql`(strftime('%s','now'))`),
+		.defaultNow(),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(profile, ({ many }) => ({
 	books: many(schema.books),
 }));
 
-const fullInsertSchema = createInsertSchema(users, {
+const fullInsertSchema = createInsertSchema(profile, {
 	password: z =>
 		z
 			.min(3, 'Password must be at least 3 charaters long')
@@ -33,7 +33,7 @@ const fullInsertSchema = createInsertSchema(users, {
 			.max(20, 'Username must be at most 20 charaters long'),
 });
 
-const fullSelectSchema = createSelectSchema(users);
+const fullSelectSchema = createSelectSchema(profile);
 
 export const insertRegisterUserSchema = fullInsertSchema.omit({
 	id: true,
