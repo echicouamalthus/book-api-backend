@@ -5,6 +5,7 @@ import { defaultHook } from 'stoker/openapi';
 import { cors } from 'hono/cors';
 
 import packageJSON from '../package.json';
+import { app as authRoute } from '../src/routes/auth.route';
 
 const app = new OpenAPIHono({
 	strict: true,
@@ -25,6 +26,8 @@ app.use('*', serveEmojiFavicon('📕'));
 app.notFound(notFound);
 app.onError(onError);
 
+app.route('/auth', authRoute);
+
 app.doc('/doc', {
 	openapi: '3.0.0',
 	info: {
@@ -39,7 +42,11 @@ app.doc('/doc', {
 });
 
 app.get('/', c => {
-	return c.json({ message: "Congrats! You've deployed Hono to Vercel" });
+	return c.json({
+		message: `Bienvenue sur l'API Book ! Ce projet gère une bibliothèque de livres avec Hono, TypeScript et OpenAPI. ${new URL(
+			'https://www.youtube.com/'
+		)}`,
+	});
 });
 
 export default app;

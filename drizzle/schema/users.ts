@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import * as schema from './';
+import { password } from 'bun';
 
 export const users = sqliteTable('users', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
@@ -39,6 +40,12 @@ export const insertRegisterUserSchema = fullInsertSchema.omit({
 	createAt: true,
 	updateAt: true,
 	profileImage: true,
+});
+
+export const type = fullInsertSchema.pick({
+	username: true,
+	email: true,
+	password: true,
 });
 
 export const insertLoginUserSchema = fullInsertSchema.omit({
