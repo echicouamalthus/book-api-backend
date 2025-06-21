@@ -1,22 +1,19 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import * as HttpStatusCode from 'stoker/http-status-codes';
+import { eq, or } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
+import { sign } from 'hono/jwt';
 import { jsonContent, jsonContentRequired } from 'stoker/openapi/helpers';
 import {
 	insertLoginUserSchema,
 	insertRegisterUserSchema,
 	selectUserschema,
 } from '../../drizzle/schema/profile';
-import db from '../../drizzle/db';
-import * as schema from '../../drizzle/schema';
-import { eq, or } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
-import { sign } from 'hono/jwt';
-import env from '../env';
 import { z } from 'zod';
 
-const generateToken = async (userId: number) => {
-	return await sign({ userId }, env.JWT_SECRET);
-};
+import * as schema from '../../drizzle/schema';
+import env from '../env';
+import db from '../../drizzle/db';
 
 export const app = new OpenAPIHono();
 // .basePath('/auth')
@@ -50,6 +47,35 @@ const registerRoute = createRoute({
 		),
 		[HttpStatusCode.INTERNAL_SERVER_ERROR]: jsonContent(
 			z.object({ message: z.string() }),
+			'Internal server error'
+		),
+	},
+});
+
+const loginRoute = createRoute({
+	method: 'post',
+	summary: 'Log in a user',
+	path: '/login',
+	tags: ['auth'],
+	request: {
+		body: jsonContentRequired(insertLoginUserSchema, 'user credentials'),
+	},
+	responses: {
+		[HttpStatusCode.OK]: jsonContent(
+			z.object({
+				token: z.string(),
+				user: selectUserschema,
+			}),
+			'user login successfully'
+		),
+		[HttpStatusCode.UNAUTHORIZED]: jsonContent(
+			z.object({ message: z.string() }),
+			'Invalid email or password'
+		),
+		[HttpStatusCode.INTERNAL_SERVER_ERROR]: jsonContent(
+			z.object({
+				message: z.string(),
+			}),
 			'Internal server error'
 		),
 	},
@@ -96,7 +122,18 @@ app.openapi(registerRoute, async c => {
 				username: schema.profile.username,
 			});
 
-		const token = await generateToken(user.id);
+		const payload = {
+			id: user.id,
+			exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+		};
+
+		const token = await sign(payload, env.JWT_SECRET);
+
+		// setCookie(c, 'token', token, {
+		// 	path: '/',
+		// 	httpOnly: true,
+		// 	sameSite: 'none',
+		// });
 
 		return c.json(
 			{
@@ -120,36 +157,6 @@ app.openapi(registerRoute, async c => {
 		);
 	}
 });
-
-const loginRoute = createRoute({
-	method: 'post',
-	summary: 'Log in a user',
-	path: '/login',
-	tags: ['auth'],
-	request: {
-		body: jsonContentRequired(insertLoginUserSchema, 'user credentials'),
-	},
-	responses: {
-		[HttpStatusCode.OK]: jsonContent(
-			z.object({
-				token: z.string(),
-				user: selectUserschema,
-			}),
-			'user login successfully'
-		),
-		[HttpStatusCode.UNAUTHORIZED]: jsonContent(
-			z.object({ message: z.string() }),
-			'Invalid email or password'
-		),
-		[HttpStatusCode.INTERNAL_SERVER_ERROR]: jsonContent(
-			z.object({
-				message: z.string(),
-			}),
-			'Internal server error'
-		),
-	},
-});
-
 app.openapi(loginRoute, async c => {
 	try {
 		const { email, password } = c.req.valid('json');
@@ -177,7 +184,20 @@ app.openapi(loginRoute, async c => {
 			);
 		}
 
-		const token = await generateToken(user.id);
+		const token = await sign(
+			{
+				id: user.id,
+				exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+			},
+			env.JWT_SECRET
+		);
+
+		// setCookie(c, 'token', token, {
+		// 	path: '/',
+		// 	httpOnly: true,
+		// 	secure: env.NODE_ENV === 'production',
+		// 	sameSite: env.NODE_ENV === 'production' ? 'none' : 'strict',
+		// });
 
 		return c.json(
 			{

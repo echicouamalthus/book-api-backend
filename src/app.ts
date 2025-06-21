@@ -1,12 +1,12 @@
-import { Hono } from 'hono';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { notFound, onError, serveEmojiFavicon } from 'stoker/middlewares';
 import { defaultHook } from 'stoker/openapi';
 import { cors } from 'hono/cors';
 
 import packageJSON from '../package.json';
-import { app as authRoute } from '../src/routes/auth.route';
+import { app as authRoute } from './routes/auth.route';
 import { app as bookRoute } from '../src/routes/book.route';
+import env from './env';
 
 const app = new OpenAPIHono({
 	strict: true,
@@ -16,9 +16,13 @@ const app = new OpenAPIHono({
 app.use(
 	'*',
 	cors({
-		origin: 'http://localhost:9999/api', // Replace with your frontend's origin
+		origin:
+			env.NODE_ENV === 'production'
+				? env.BASE_API_URL
+				: 'http://localhost:9999', // Replace with your frontend's origin
 		allowMethods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific methods
 		allowHeaders: ['Content-Type', 'Authorization', 'Cookie'], // Allow specific headers
+		credentials: true,
 	})
 );
 

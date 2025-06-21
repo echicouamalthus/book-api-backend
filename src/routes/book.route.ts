@@ -6,77 +6,83 @@ import cloudinary from '../lib/cloudinary';
 import { z } from 'zod';
 import * as schema from '../../drizzle/schema';
 import db from '../../drizzle/db';
-import { protectRoute } from '../middleware/auth.middleware';
+import { verifyJWT } from '../middleware/auth.middleware';
 import { count, eq } from 'drizzle-orm';
 import { IdParamsSchema } from 'stoker/openapi/schemas';
 
-export const app = new OpenAPIHono();
+type Variables = {
+	user: {
+		id: number;
+	};
+};
 
-app.use('/*', protectRoute);
+export const app = new OpenAPIHono<{ Variables: Variables }>();
 
-const createBookRoute = createRoute({
-	method: 'post',
-	summary: 'create a new book',
-	path: '/',
-	tags: ['book'],
-	request: {
-		body: jsonContentRequired(insertBookSchema, 'create new book'),
-	},
-	responses: {
-		[HttpStatusCode.CREATED]: jsonContent(selectBookSchema, 'Book created'),
-		[HttpStatusCode.UNAUTHORIZED]: jsonContent(
-			z.object({ message: z.string() }),
-			'required credentials'
-		),
-		[HttpStatusCode.INTERNAL_SERVER_ERROR]: jsonContent(
-			z.object({ message: z.string() }),
-			'Internal server error'
-		),
-	},
-});
+app.use('*', verifyJWT);
 
-app.openapi(createBookRoute, async c => {
-	try {
-		const { caption, title, rating, image } = await c.req.valid('json');
-		const jwtPayload = c.get('jwtPayload') as { userId: number } | undefined;
-		const userId = jwtPayload?.userId;
+// const createBookRoute = createRoute({
+// 	method: 'post',
+// 	summary: 'create a new book',
+// 	path: '/',
+// 	tags: ['book'],
+// 	request: {
+// 		body: jsonContentRequired(insertBookSchema, 'create new book'),
+// 	},
+// 	responses: {
+// 		[HttpStatusCode.CREATED]: jsonContent(selectBookSchema, 'Book created'),
+// 		[HttpStatusCode.UNAUTHORIZED]: jsonContent(
+// 			z.object({ message: z.string() }),
+// 			'required credentials'
+// 		),
+// 		[HttpStatusCode.INTERNAL_SERVER_ERROR]: jsonContent(
+// 			z.object({ message: z.string() }),
+// 			'Internal server error'
+// 		),
+// 	},
+// });
 
-		if (!userId) {
-			return c.json(
-				{ message: 'User Id is required' },
-				HttpStatusCode.UNAUTHORIZED
-			);
-		}
+// app.openapi(createBookRoute, async c => {
+// 	try {
+// 		const { caption, title, rating, image } = await c.req.valid('json');
+// 		const user = c.get('user');
+// 		const userId = user?.id;
 
-		if (!image) {
-			return c.json(
-				{ message: 'Image is required' },
-				HttpStatusCode.UNAUTHORIZED
-			);
-		}
-		const uploadResponse = await cloudinary.uploader.upload(image);
-		const imageUrl = uploadResponse.secure_url;
+// 		if (!userId) {
+// 			return c.json(
+// 				{ message: 'User Id is required' },
+// 				HttpStatusCode.UNAUTHORIZED
+// 			);
+// 		}
 
-		const [book] = await db
-			.insert(schema.books)
-			.values({
-				caption,
-				title,
-				rating,
-				image: imageUrl,
-				userId,
-			})
-			.returning();
+// 		if (!image) {
+// 			return c.json(
+// 				{ message: 'Image is required' },
+// 				HttpStatusCode.UNAUTHORIZED
+// 			);
+// 		}
+// 		const uploadResponse = await cloudinary.uploader.upload(image);
+// 		const imageUrl = uploadResponse.secure_url;
 
-		return c.json(book, HttpStatusCode.CREATED);
-	} catch (error) {
-		console.error('create book error', error);
-		return c.json(
-			{ message: 'Internal server error' },
-			HttpStatusCode.INTERNAL_SERVER_ERROR
-		);
-	}
-});
+// 		const [book] = await db
+// 			.insert(schema.books)
+// 			.values({
+// 				caption,
+// 				title,
+// 				rating,
+// 				image: imageUrl,
+// 				userId,
+// 			})
+// 			.returning();
+
+// 		return c.json(book, HttpStatusCode.CREATED);
+// 	} catch (error) {
+// 		console.error('create book error', error);
+// 		return c.json(
+// 			{ message: 'Internal server error' },
+// 			HttpStatusCode.INTERNAL_SERVER_ERROR
+// 		);
+// 	}
+// });
 
 const getAllBooksRoute = createRoute({
 	method: 'get',
@@ -90,6 +96,15 @@ const getAllBooksRoute = createRoute({
 		}),
 	},
 	responses: {
+		// [HttpStatusCode.OK]: jsonContent(
+		// 	z.object({
+		// 		message: z.string(),
+		// 		user: z.object({
+		// 			id: z.coerce.number(),
+		// 		}),
+		// 	}),
+		// 	'verify set'
+		// ),
 		[HttpStatusCode.OK]: jsonContent(
 			z.object({
 				books: z.array(selectBookSchema),
@@ -109,6 +124,16 @@ const getAllBooksRoute = createRoute({
 });
 
 app.openapi(getAllBooksRoute, async c => {
+	// const user = c.get('user');
+
+	// return c.json(
+	// 	{
+	// 		message: `Bienvenue ${user.id}`,
+	// 		user,
+	// 	},
+	// 	HttpStatusCode.OK
+	// );
+
 	try {
 		const query = await c.req.valid('query');
 		const page = Number(query.page || 1);
@@ -144,7 +169,7 @@ app.openapi(getAllBooksRoute, async c => {
 	}
 });
 
-const getBookUserRoute = createRoute({
+const getBookUserByIdRoute = createRoute({
 	method: 'get',
 	summary: 'Get a book by userId',
 	path: '/user',
@@ -175,12 +200,11 @@ const getBookUserRoute = createRoute({
 	},
 });
 
-app.openapi(getBookUserRoute, async c => {
+app.openapi(getBookUserByIdRoute, async c => {
 	try {
-		const jwtPayload = c.get('jwtPayload') as { userId: number } | undefined;
-		const userId = jwtPayload?.userId;
+		const user = c.get('user');
 
-		if (!userId) {
+		if (!user.id) {
 			return c.json(
 				{ message: 'User Id is required' },
 				HttpStatusCode.UNAUTHORIZED
@@ -190,7 +214,7 @@ app.openapi(getBookUserRoute, async c => {
 		const books = await db
 			.select()
 			.from(schema.books)
-			.where(eq(schema.books.userId, userId));
+			.where(eq(schema.books.userId, user.id));
 
 		if (books.length === 0) {
 			return c.json(
@@ -258,8 +282,9 @@ app.openapi(deleteBooksRoute, async c => {
 		}
 
 		//check if user is the owner of the book
-		const jwtPayload = c.get('jwtPayload') as { userId: number } | undefined;
-		const userId = jwtPayload?.userId;
+		const user = c.get('user');
+		const userId = user?.id;
+
 		if (userId !== book.userId) {
 			return c.json(
 				{

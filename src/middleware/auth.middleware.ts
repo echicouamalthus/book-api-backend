@@ -1,9 +1,17 @@
 // middlewares/protectRoute.ts
-import { MiddlewareHandler } from 'hono';
+import { Context, MiddlewareHandler, Next } from 'hono';
 import { verify } from 'hono/jwt';
 import env from '../env';
+import { getCookie } from 'hono/cookie';
+import * as schema from '../../drizzle/schema';
+import db from '../../drizzle/db';
+import { eq } from 'drizzle-orm';
 
-export const protectRoute: MiddlewareHandler = async (c, next) => {
+type jwtPayload = {
+	id: string;
+};
+
+export const verifyJWT: MiddlewareHandler = async (c, next) => {
 	const authHeader = c.req.header('Authorization');
 	const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
@@ -12,16 +20,17 @@ export const protectRoute: MiddlewareHandler = async (c, next) => {
 	}
 
 	try {
-		const decoded = await verify(token, env.JWT_SECRET);
+		const payload = (await verify(token, env.JWT_SECRET)) as {
+			id: number;
+		};
 
-		if (typeof decoded !== 'object' || !decoded.userId) {
-			return c.json({ error: 'Invalid token' }, 401);
-		}
-
-		c.set('userId', decoded.userId); // tu peux récupérer dans ta route avec c.get('user')
+		c.set('user', payload);
 
 		await next();
 	} catch (error) {
 		return c.json({ message: 'Invalid or expired token' }, 401);
 	}
 };
+// if (typeof decoded !== 'object' || !decoded.userId) {
+// 	return c.json({ error: 'Invalid token' }, 401);
+// }
