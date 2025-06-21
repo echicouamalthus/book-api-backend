@@ -169,7 +169,7 @@ app.openapi(getAllBooksRoute, async c => {
 	}
 });
 
-const getBookUserByIdRoute = createRoute({
+const getBookUserRoute = createRoute({
 	method: 'get',
 	summary: 'Get a book by userId',
 	path: '/user',
@@ -200,7 +200,7 @@ const getBookUserByIdRoute = createRoute({
 	},
 });
 
-app.openapi(getBookUserByIdRoute, async c => {
+app.openapi(getBookUserRoute, async c => {
 	try {
 		const user = c.get('user');
 
